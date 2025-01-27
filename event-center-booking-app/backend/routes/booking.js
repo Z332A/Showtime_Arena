@@ -129,8 +129,6 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 // 6. Check for overlapping bookings
 const overlap = await Booking.findOne({
   $or: [
@@ -140,3 +138,5 @@ const overlap = await Booking.findOne({
 if (overlap) {
   return res.status(400).json({ error: "Time slot is already booked" });
 }
+
+module.exports = router;
