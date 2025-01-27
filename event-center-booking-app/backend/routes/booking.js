@@ -12,6 +12,19 @@ router.post('/', async (req, res) => {
     const sessionInMs = 30 * 60 * 1000; // 30 minutes
     const endTime = new Date(new Date(startTime).getTime() + numberOfSessions * sessionInMs);
 
+    // Check for overlapping booking
+    const overlap = await Booking.findOne({
+      $or: [
+        // Condition: Overlap if existing booking's startTime < newBooking.endTime
+        // and existing booking's endTime > newBooking.startTime
+        { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
+      ]
+    });
+    if (overlap) {
+      return res.status(400).json({ error: 'Time slot is already booked' });
+    }
+
+    // If no overlap, proceed to create the booking
     const newBooking = new Booking({
       customerName,
       contact,
@@ -58,7 +71,7 @@ router.get('/available', async (req, res) => {
       endTime: { $gte: dayStart },
     });
 
-    // Generate all 30-min intervals
+    // Generate all 30-min intervals in that day
     const intervals = [];
     let current = new Date(dayStart);
     while (current < dayEnd) {
@@ -85,6 +98,7 @@ router.put('/:id', async (req, res) => {
   try {
     const { customerName, contact, startTime, numberOfSessions, status } = req.body;
 
+    // If startTime or numberOfSessions are being updated, recalculate endTime
     let endTime;
     if (startTime && numberOfSessions) {
       const sessionInMs = 30 * 60 * 1000;
@@ -100,8 +114,9 @@ router.put('/:id', async (req, res) => {
       ...(status && { status }),
     };
 
-    const updatedBooking = await Booking.findByIdAndUpdate(req.params.id, 
-      { $set: updatedFields }, 
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      { $set: updatedFields },
       { new: true }
     );
 
@@ -129,14 +144,5 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// 6. Check for overlapping bookings
-const overlap = await Booking.findOne({
-  $or: [
-    { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
-  ]
-});
-if (overlap) {
-  return res.status(400).json({ error: "Time slot is already booked" });
-}
-
+// Finally, export the router so Express can use it
 module.exports = router;
