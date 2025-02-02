@@ -6,28 +6,30 @@ const connectDB = require('./db');
 const bookingRoutes = require('./routes/booking');
 
 const app = express();
-app.use(cors());
+
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Connect to MongoDB first
+// Mount booking routes BEFORE starting the server
+app.use('/api/bookings', bookingRoutes);
+
+// Default route
+app.get('/', (req, res) => {
+  res.send('Event Center Booking API is running...');
+});
+
 connectDB()
   .then(() => {
-    // Once connected, start the server
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
   .catch((err) => {
-    // We already log/exit in db.js if connection fails,
-    // but you could log here as well if desired.
     console.error('DB connection promise rejected:', err);
   });
-
-// Routes
-app.use('/api/bookings', bookingRoutes);
-
-// Optional default route
-app.get('/', (req, res) => {
-  res.send('Event Center Booking API is running...');
-});

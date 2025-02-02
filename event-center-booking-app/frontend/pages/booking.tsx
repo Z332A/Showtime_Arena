@@ -1,9 +1,10 @@
 // pages/booking.tsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Booking } from '../types/Booking'; // Adjust the path as necessary
+import { Booking } from '../types/Booking'; // Ensure the path and casing are correct
 
 const BookingPage: React.FC = () => {
+  // Use Booking[] instead of any[]
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);

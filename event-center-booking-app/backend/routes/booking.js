@@ -3,20 +3,26 @@ const express = require('express');
 const router = express.Router();
 const Booking = require('../models/Booking');
 
-// 1. Create new booking
+// 1. Create a new booking
 router.post('/', async (req, res) => {
   try {
     const { customerName, contact, startTime, numberOfSessions } = req.body;
 
-    // Calculate endTime based on 30-minute sessions
-    const sessionInMs = 30 * 60 * 1000; // 30 minutes
-    const endTime = new Date(new Date(startTime).getTime() + numberOfSessions * sessionInMs);
+    // Validate required fields
+    if (!customerName || !contact || !startTime || !numberOfSessions) {
+      return res.status(400).json({ error: 'Missing required booking fields.' });
+    }
 
-    // Check for overlapping booking
+    // Calculate endTime based on 30-minute sessions
+    const sessionDuration = 30 * 60 * 1000; // 30 minutes in ms
+    const startDateTime = new Date(startTime);
+    const endTime = new Date(startDateTime.getTime() + numberOfSessions * sessionDuration);
+
+    // Check for overlapping bookings:
+    // We consider an overlap if an existing booking's startTime is before the new booking's endTime
+    // and its endTime is after the new booking's startTime.
     const overlap = await Booking.findOne({
       $or: [
-        // Condition: Overlap if existing booking's startTime < newBooking.endTime
-        // and existing booking's endTime > newBooking.startTime
         { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
       ]
     });
@@ -24,11 +30,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Time slot is already booked' });
     }
 
-    // If no overlap, proceed to create the booking
+    // Create and save the new booking
     const newBooking = new Booking({
       customerName,
       contact,
-      startTime,
+      startTime: startDateTime,
       endTime,
       numberOfSessions,
     });
@@ -52,15 +58,15 @@ router.get('/', async (req, res) => {
   }
 });
 
-// 3. Get available slots
+// 3. Get available slots for a given date
 router.get('/available', async (req, res) => {
   try {
     const { date } = req.query;
     if (!date) {
-      return res.status(400).json({ error: 'Date query param is required' });
+      return res.status(400).json({ error: 'Date query parameter is required.' });
     }
 
-    // Start/end of the given day
+    // Set boundaries for the day
     const dayStart = new Date(date);
     dayStart.setHours(0, 0, 0, 0);
     const dayEnd = new Date(date);
@@ -71,7 +77,7 @@ router.get('/available', async (req, res) => {
       endTime: { $gte: dayStart },
     });
 
-    // Generate all 30-min intervals in that day
+    // Generate all 30-minute intervals for the day
     const intervals = [];
     let current = new Date(dayStart);
     while (current < dayEnd) {
@@ -79,9 +85,9 @@ router.get('/available', async (req, res) => {
       current = new Date(current.getTime() + 30 * 60 * 1000);
     }
 
-    // Filter out intervals that fall within any booking
-    const availableSlots = intervals.filter((timeSlot) => {
-      return !bookings.some((booking) => {
+    // Filter out intervals that overlap with any booking
+    const availableSlots = intervals.filter(timeSlot => {
+      return !bookings.some(booking => {
         return timeSlot >= booking.startTime && timeSlot < booking.endTime;
       });
     });
@@ -98,11 +104,10 @@ router.put('/:id', async (req, res) => {
   try {
     const { customerName, contact, startTime, numberOfSessions, status } = req.body;
 
-    // If startTime or numberOfSessions are being updated, recalculate endTime
     let endTime;
     if (startTime && numberOfSessions) {
-      const sessionInMs = 30 * 60 * 1000;
-      endTime = new Date(new Date(startTime).getTime() + numberOfSessions * sessionInMs);
+      const sessionDuration = 30 * 60 * 1000;
+      endTime = new Date(new Date(startTime).getTime() + numberOfSessions * sessionDuration);
     }
 
     const updatedFields = {
@@ -133,16 +138,15 @@ router.put('/:id', async (req, res) => {
 // 5. Delete a booking
 router.delete('/:id', async (req, res) => {
   try {
-    const deleted = await Booking.findByIdAndDelete(req.params.id);
-    if (!deleted) {
+    const deletedBooking = await Booking.findByIdAndDelete(req.params.id);
+    if (!deletedBooking) {
       return res.status(404).json({ error: 'Booking not found' });
     }
-    return res.json({ message: 'Booking deleted' });
+    return res.json({ message: 'Booking deleted successfully' });
   } catch (err) {
     console.error('Error deleting booking:', err);
     return res.status(500).json({ error: 'Server Error' });
   }
 });
 
-// Finally, export the router so Express can use it
 module.exports = router;
