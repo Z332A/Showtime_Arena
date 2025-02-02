@@ -55,7 +55,7 @@ const getDayOfWeek = (dateStr: string): string => {
   return date.toLocaleDateString(undefined, { weekday: 'long' });
 };
 
-// Helper function to combine start time selects into a 24-hour time string
+// Helper function to convert 12-hour time to 24-hour time string.
 const convertTo24HourTime = (hour: string, minute: string, period: string): string => {
   let hr = parseInt(hour, 10);
   if (period === 'PM' && hr !== 12) {
@@ -63,7 +63,6 @@ const convertTo24HourTime = (hour: string, minute: string, period: string): stri
   } else if (period === 'AM' && hr === 12) {
     hr = 0;
   }
-  // Pad hour with leading zero if needed
   const hrStr = hr.toString().padStart(2, '0');
   return `${hrStr}:${minute}`;
 };
@@ -73,6 +72,7 @@ const NewBookingPage: React.FC = () => {
 
   // Step state: 1 = Biodata & Availability Check, 2 = Pricing & Additional Services
   const [step, setStep] = useState<number>(1);
+  // Flag to indicate that the order has been confirmed (price computed)
   const [orderConfirmed, setOrderConfirmed] = useState<boolean>(false);
 
   // Biodata and booking fields (all required)
@@ -82,12 +82,13 @@ const NewBookingPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD
   const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD
 
-  // For start time, we use separate state for hour, minute, and period.
-  const [startHour, setStartHour] = useState<string>('1'); // values: "1" to "12"
-  const [startMinute, setStartMinute] = useState<string>('00'); // values: "00", "30"
-  const [startPeriod, setStartPeriod] = useState<string>('AM'); // values: "AM", "PM"
+  // For start time, we use separate selects for hour, minute, and period.
+  const [startHour, setStartHour] = useState<string>('1'); // "1" to "12"
+  const [startMinute, setStartMinute] = useState<string>('00'); // "00" or "30"
+  const [startPeriod, setStartPeriod] = useState<string>('AM'); // "AM" or "PM"
 
-  const [hoursPerSession, setHoursPerSession] = useState<number>(1);
+  // Number of hours per session; default and minimum is now 2 hours.
+  const [hoursPerSession, setHoursPerSession] = useState<number>(2);
 
   // Additional services (checkboxes)
   const [wantMediaServices, setWantMediaServices] = useState<boolean>(false);
@@ -181,7 +182,7 @@ const NewBookingPage: React.FC = () => {
     setAvailabilityMessage('');
     setProceedEnabled(false);
 
-    // Validate required fields.
+    // Validate that all required fields are filled.
     if (!customerName || !phoneNumber || !email || !startDate || !endDate || !startHour || !startMinute || !startPeriod || !hoursPerSession) {
       setError('Please fill in all required fields.');
       setLoading(false);
@@ -248,17 +249,17 @@ const NewBookingPage: React.FC = () => {
   };
 
   // Handler for Confirm Booking (Proceed to Payment)
-  // Sends booking data to the backend, then redirects to the Payment page with the total amount as a query parameter.
+  // Combines the time selects into a 24-hour time string, sends booking data to the backend,
+  // then redirects to the Payment page with the total amount as a query parameter.
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
     setError(null);
 
-    // Combine the start time selects into a 24-hour time string.
+    // Convert the selected time into 24-hour format.
     const combinedStartTime = convertTo24HourTime(startHour, startMinute, startPeriod);
-    // Combine the startDate and the computed time (assuming today's date and provided time)
-    // Here, we create a Date object using the startDate and combinedStartTime.
+    // Create a Date object combining startDate and the computed time.
     const startDateTime = new Date(`${startDate}T${combinedStartTime}:00`);
 
     try {
@@ -267,8 +268,8 @@ const NewBookingPage: React.FC = () => {
         customerName,
         phoneNumber,
         email,
-        startDate: startDateTime, // use computed start time as a Date
-        endDate, // endDate remains as provided (or you could compute an end date if needed)
+        startTime: startDateTime, // Using the computed 24-hour time as startTime
+        endDate, // endDate remains as provided (you may compute endTime on backend)
         hoursPerSession,
         sessionsCount,
         wantMediaServices,
@@ -289,18 +290,6 @@ const NewBookingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Helper function to convert 12-hour time to 24-hour time string.
-  const convertTo24HourTime = (hour: string, minute: string, period: string): string => {
-    let hr = parseInt(hour, 10);
-    if (period === 'PM' && hr !== 12) {
-      hr += 12;
-    } else if (period === 'AM' && hr === 12) {
-      hr = 0;
-    }
-    const hrStr = hr.toString().padStart(2, '0');
-    return `${hrStr}:${minute}`;
   };
 
   return (
@@ -377,7 +366,7 @@ const NewBookingPage: React.FC = () => {
               )}
             </Form.Group>
 
-            {/* Updated Start Time using three selects for hour, minute, and period */}
+            {/* Time selection using separate selects */}
             <Row className="mb-3">
               <Form.Group as={Col} controlId="startHour">
                 <Form.Label>Start Hour</Form.Label>
@@ -426,7 +415,7 @@ const NewBookingPage: React.FC = () => {
                 type="number"
                 value={hoursPerSession}
                 onChange={(e) => setHoursPerSession(parseInt(e.target.value, 10))}
-                min={1}
+                min={2}
                 required
               />
             </Form.Group>
@@ -458,7 +447,7 @@ const NewBookingPage: React.FC = () => {
       {step === 2 && (
         <>
           <h2 className="mb-3">Price Summary</h2>
-          {/* Confirm Order Button: Forces price computation */}
+          {/* Confirm Order Button */}
           {!orderConfirmed && (
             <Button
               variant="warning"
@@ -594,7 +583,7 @@ const NewBookingPage: React.FC = () => {
                 <td className="text-end">{requireStreaming ? (sessionsCount * STREAMING_FEE).toLocaleString() : '0'}</td>
                 <td>{requireStreaming ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Only show the following rows if order is confirmed */}
+              {/* Only show the following rows if the order is confirmed */}
               {orderConfirmed && (
                 <>
                   <tr>
