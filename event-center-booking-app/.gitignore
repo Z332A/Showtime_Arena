@@ -5,7 +5,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# OS/Editor files
+# OS / Editor files
 .DS_Store
 Thumbs.db
 
@@ -15,15 +15,23 @@ node_modules/
 # Build output
 build/
 dist/
+.next/  # Next.js build directory
 
 # Environment variables
 .env
-.env.*  # In case you use multiple env files like .env.development, .env.production, etc.
+.env.*  # In case you use multiple env files (e.g. .env.development, .env.production, etc.)
 
-# Coverage directories (if you use Jest or other testing)
+# Coverage directories (if you use Jest or other testing tools)
 coverage/
 
-# Optional: if you use a package-lock.json or yarn.lock, typically you *do* commit these
-# but if you *don't* want them versioned, uncomment:
+# Temporary files
+tmp/
+temp/
+
+# IDE files (optional, adjust for your IDE)
+.vscode/
+.idea/
+
+# Optional: lock files (if you prefer not to commit them, uncomment below)
 # package-lock.json
 # yarn.lock
