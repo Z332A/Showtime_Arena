@@ -1,4 +1,5 @@
 // pages/new-booking.tsx
+/* eslint-disable prefer-const */
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import {
@@ -8,7 +9,6 @@ import {
   Row,
   Col,
   Alert,
-  Spinner,
   Table,
 } from 'react-bootstrap';
 import { useRouter } from 'next/router';
@@ -28,7 +28,7 @@ const computeSessionsCount = (startDateStr: string, endDateStr: string): number 
   const endDate = new Date(endDateStr);
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return 0;
   if (startDate > endDate) return 0;
-  
+
   const targetDay = startDate.getDay();
   let count = 0;
   let current = new Date(startDate);
@@ -55,7 +55,7 @@ const getDayOfWeek = (dateStr: string): string => {
   return date.toLocaleDateString(undefined, { weekday: 'long' });
 };
 
-// Helper function to convert 12-hour time to 24-hour time string.
+// Convert 12-hour time to 24-hour time string.
 const convertTo24HourTime = (hour: string, minute: string, period: string): string => {
   let hr = parseInt(hour, 10);
   if (period === 'PM' && hr !== 12) {
@@ -72,32 +72,31 @@ const NewBookingPage: React.FC = () => {
 
   // Step state: 1 = Biodata & Availability Check, 2 = Pricing & Additional Services
   const [step, setStep] = useState<number>(1);
-  // Flag to indicate that the order has been confirmed (price computed)
   const [orderConfirmed, setOrderConfirmed] = useState<boolean>(false);
 
-  // Biodata and booking fields (all required)
+  // Booking fields
   const [customerName, setCustomerName] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD
   const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD
 
-  // For start time, we use separate selects for hour, minute, and period.
-  const [startHour, setStartHour] = useState<string>('1'); // "1" to "12"
-  const [startMinute, setStartMinute] = useState<string>('00'); // "00" or "30"
-  const [startPeriod, setStartPeriod] = useState<string>('AM'); // "AM" or "PM"
+  // Time selections: hour (1-12), minute ("00" or "30"), period ("AM"/"PM")
+  const [startHour, setStartHour] = useState<string>('1');
+  const [startMinute, setStartMinute] = useState<string>('00');
+  const [startPeriod, setStartPeriod] = useState<string>('AM');
 
-  // Number of hours per session; default and minimum is now 2 hours.
+  // Number of hours per session; minimum is 2.
   const [hoursPerSession, setHoursPerSession] = useState<number>(2);
 
-  // Additional services (checkboxes)
+  // Additional services
   const [wantMediaServices, setWantMediaServices] = useState<boolean>(false);
   const [needLEDScreen, setNeedLEDScreen] = useState<boolean>(false);
   const [needSoundEquipment, setNeedSoundEquipment] = useState<boolean>(false);
   const [ownDrinks, setOwnDrinks] = useState<boolean>(false);
   const [requireStreaming, setRequireStreaming] = useState<boolean>(false);
 
-  // Derived states and feedback
+  // Derived state & pricing feedback
   const [sessionsCount, setSessionsCount] = useState<number>(0);
   const [availabilityMessage, setAvailabilityMessage] = useState<string>('');
   const [proceedEnabled, setProceedEnabled] = useState<boolean>(false);
@@ -128,25 +127,22 @@ const NewBookingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Pricing constants
-  const DAY_RATE = 120000;       // per hour if total hours <= 24
-  const LONG_RATE = 100000;      // per hour if total hours > 24
-  const MEDIA_FEE = 200000;      // per session for media services
-  const LED_FEE = 20000;         // per session for LED screen
-  const SOUND_FEE = 20000;       // per session for sound equipment
-  const DRINK_FEE = 50000;       // per session for corkage if own drinks
-  const STREAMING_FEE = 150000;  // per session for streaming services
-  const VAT_RATE = 0.075;        // 7.5%
+  const DAY_RATE = 120000;
+  const LONG_RATE = 100000;
+  const MEDIA_FEE = 200000;
+  const LED_FEE = 20000;
+  const SOUND_FEE = 20000;
+  const DRINK_FEE = 50000;
+  const STREAMING_FEE = 150000;
+  const VAT_RATE = 0.075;
 
-  // Update sessions count when startDate or endDate changes.
+  // Update sessions count whenever startDate or endDate changes.
   useEffect(() => {
     const count = computeSessionsCount(startDate, endDate);
     setSessionsCount(count);
   }, [startDate, endDate]);
 
-  // Calculate the price breakdown.
-  // For the Pitch Booking row:
-  //   Unit Price = hoursPerSession * (if totalHours > 24 then LONG_RATE else DAY_RATE)
-  //   Amount Payable = Unit Price * sessionsCount
+  // Calculate price breakdown.
   const calculatePrice = (sessions: number) => {
     const totalHours = sessions * hoursPerSession;
     const costPerHour = totalHours > 24 ? LONG_RATE : DAY_RATE;
@@ -182,22 +178,19 @@ const NewBookingPage: React.FC = () => {
     setAvailabilityMessage('');
     setProceedEnabled(false);
 
-    // Validate that all required fields are filled.
     if (!customerName || !phoneNumber || !email || !startDate || !endDate || !startHour || !startMinute || !startPeriod || !hoursPerSession) {
       setError('Please fill in all required fields.');
       setLoading(false);
       return;
     }
 
-    // Validate that Start Date is not in the past.
-    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayStr = new Date().toISOString().split('T')[0];
     if (startDate < todayStr) {
       setError('Start Date cannot be in the past.');
       setLoading(false);
       return;
     }
 
-    // Validate that End Date is not before Start Date.
     if (endDate < startDate) {
       setError('End Date cannot be earlier than Start Date.');
       setLoading(false);
@@ -220,7 +213,6 @@ const NewBookingPage: React.FC = () => {
       }
       setAvailabilityMessage(message);
       setProceedEnabled(enableProceed);
-      // When checking availability, do not compute price until order is confirmed.
       setOrderConfirmed(false);
       setPriceBreakdown({
         baseCost: 0,
@@ -233,7 +225,7 @@ const NewBookingPage: React.FC = () => {
         vat: 0,
         total: 0,
       });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error checking availability:', err);
       setError('Failed to check availability.');
     } finally {
@@ -242,34 +234,30 @@ const NewBookingPage: React.FC = () => {
   };
 
   // Handler for Confirm Order button in Step 2.
-  // This forces a price computation so that all additional service selections are captured.
   const handleConfirmOrder = () => {
     calculatePrice(sessionsCount);
     setOrderConfirmed(true);
   };
 
   // Handler for Confirm Booking (Proceed to Payment)
-  // Combines the time selects into a 24-hour time string, sends booking data to the backend,
-  // then redirects to the Payment page with the total amount as a query parameter.
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
     setError(null);
 
-    // Convert the selected time into 24-hour format.
     const combinedStartTime = convertTo24HourTime(startHour, startMinute, startPeriod);
-    // Create a Date object combining startDate and the computed time.
     const startDateTime = new Date(`${startDate}T${combinedStartTime}:00`);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://showtime-arena.onrender.com';
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      console.log('Posting booking data to:', `${API_URL}/api/bookings`);
       const bookingData = {
         customerName,
         phoneNumber,
         email,
-        startTime: startDateTime, // Using the computed 24-hour time as startTime
-        endDate, // endDate remains as provided (you may compute endTime on backend)
+        startTime: startDateTime,
+        endDate,
         hoursPerSession,
         sessionsCount,
         wantMediaServices,
@@ -282,9 +270,8 @@ const NewBookingPage: React.FC = () => {
 
       await axios.post(`${API_URL}/api/bookings`, bookingData);
       setSuccess('Booking created successfully!');
-      // Redirect to Payment page with total amount as a query parameter.
       router.push(`/payment?amount=${priceBreakdown.total}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error creating booking:', err);
       setError('Failed to create booking. Please try again.');
     } finally {
@@ -311,7 +298,6 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
-
             <Form.Group controlId="phoneNumber" className="mb-3">
               <Form.Label>Phone Number</Form.Label>
               <Form.Control
@@ -322,7 +308,6 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
-
             <Form.Group controlId="email" className="mb-3">
               <Form.Label>Email Address</Form.Label>
               <Form.Control
@@ -333,7 +318,6 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
-
             <Form.Group controlId="startDate" className="mb-3">
               <Form.Label>Start Date</Form.Label>
               <Form.Control
@@ -349,7 +333,6 @@ const NewBookingPage: React.FC = () => {
                 </Form.Text>
               )}
             </Form.Group>
-
             <Form.Group controlId="endDate" className="mb-3">
               <Form.Label>End Date</Form.Label>
               <Form.Control
@@ -365,8 +348,6 @@ const NewBookingPage: React.FC = () => {
                 </Form.Text>
               )}
             </Form.Group>
-
-            {/* Time selection using separate selects */}
             <Row className="mb-3">
               <Form.Group as={Col} controlId="startHour">
                 <Form.Label>Start Hour</Form.Label>
@@ -408,7 +389,6 @@ const NewBookingPage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Row>
-
             <Form.Group controlId="hoursPerSession" className="mb-3">
               <Form.Label>Number of Hours per Session</Form.Label>
               <Form.Control
@@ -419,7 +399,6 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
-
             <Button variant="primary" type="submit" disabled={loading} className="w-100">
               {loading ? 'Checking Availability...' : 'Check Availability'}
             </Button>
@@ -458,7 +437,6 @@ const NewBookingPage: React.FC = () => {
               {loading ? 'Confirming Order...' : 'Confirm Order'}
             </Button>
           )}
-
           <Table striped bordered hover>
             <thead>
               <tr>
@@ -583,7 +561,7 @@ const NewBookingPage: React.FC = () => {
                 <td className="text-end">{requireStreaming ? (sessionsCount * STREAMING_FEE).toLocaleString() : '0'}</td>
                 <td>{requireStreaming ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Only show the following rows if the order is confirmed */}
+              {/* Subtotal, VAT, and Total rows (shown after order is confirmed) */}
               {orderConfirmed && (
                 <>
                   <tr>
@@ -611,7 +589,6 @@ const NewBookingPage: React.FC = () => {
               )}
             </tbody>
           </Table>
-          {/* If order is not yet confirmed, show a Confirm Order button */}
           {!orderConfirmed && (
             <Button
               variant="warning"

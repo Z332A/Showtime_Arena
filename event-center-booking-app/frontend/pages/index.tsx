@@ -11,7 +11,7 @@ const HomePage: React.FC = () => {
         <Col md={6}>
           <h1>Welcome to Showtime Arena</h1>
           <p>
-            Manage your bookings efficiently with our easy-to-use platform. Whether you are scheduling sessions or reviewing past bookings, we've got you covered.
+            Manage your bookings efficiently with our easy-to-use platform. Whether you are scheduling sessions or reviewing past bookings, we have got you covered.
           </p>
           <Link href="/new-booking" passHref>
             <Button variant="primary" size="lg">Create a Booking</Button>
