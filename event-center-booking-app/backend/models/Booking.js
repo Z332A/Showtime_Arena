@@ -1,3 +1,4 @@
+// models/Booking.js
 const mongoose = require('mongoose');
 
 const BookingSchema = new mongoose.Schema({
@@ -5,7 +6,11 @@ const BookingSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  contact: {
+  phoneNumber: {  // Changed from "contact" to "phoneNumber"
+    type: String,
+    required: true,
+  },
+  email: {
     type: String,
     required: true,
   },
@@ -13,19 +18,46 @@ const BookingSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
-  endTime: {
+  endDate: {  // Storing end date (as provided by the frontend)
     type: Date,
     required: true,
   },
-  numberOfSessions: {
+  hoursPerSession: {
     type: Number,
     required: true,
-    default: 1,
+    min: 2,
+  },
+  sessionsCount: {  // Changed from "numberOfSessions" to "sessionsCount"
+    type: Number,
+    required: true,
     min: 1,
+  },
+  wantMediaServices: {
+    type: Boolean,
+    default: false,
+  },
+  needLEDScreen: {
+    type: Boolean,
+    default: false,
+  },
+  needSoundEquipment: {
+    type: Boolean,
+    default: false,
+  },
+  ownDrinks: {
+    type: Boolean,
+    default: false,
+  },
+  requireStreaming: {
+    type: Boolean,
+    default: false,
+  },
+  priceBreakdown: {
+    type: mongoose.Schema.Types.Mixed, // Accepts an object of any shape
+    required: true,
   },
   status: {
     type: String,
-    required: true,
     default: 'Pending',
   },
 }, { timestamps: true });
