@@ -270,7 +270,9 @@ const NewBookingPage: React.FC = () => {
 
       await axios.post(`${API_URL}/api/bookings`, bookingData);
       setSuccess('Booking created successfully!');
-      router.push(`/payment?amount=${priceBreakdown.total}`);
+      router.push(
+        `/payment?amount=${priceBreakdown.total}&customerName=${encodeURIComponent(customerName)}`
+      );
     } catch (err: unknown) {
       console.error('Error creating booking:', err);
       setError('Failed to create booking. Please try again.');
