@@ -44,7 +44,11 @@ const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
   const date = new Date(dateStr);
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 };
 
 // Get day of week from a date string
@@ -55,7 +59,7 @@ const getDayOfWeek = (dateStr: string): string => {
   return date.toLocaleDateString(undefined, { weekday: 'long' });
 };
 
-// Convert 12-hour time to 24-hour time string.
+// Convert 12-hour time to 24-hour time string
 const convertTo24HourTime = (hour: string, minute: string, period: string): string => {
   let hr = parseInt(hour, 10);
   if (period === 'PM' && hr !== 12) {
@@ -86,7 +90,7 @@ const NewBookingPage: React.FC = () => {
   const [startMinute, setStartMinute] = useState<string>('00');
   const [startPeriod, setStartPeriod] = useState<string>('AM');
 
-  // Number of hours per session; minimum is 2.
+  // Number of hours per session; minimum is 2
   const [hoursPerSession, setHoursPerSession] = useState<number>(2);
 
   // Additional services
@@ -96,7 +100,7 @@ const NewBookingPage: React.FC = () => {
   const [ownDrinks, setOwnDrinks] = useState<boolean>(false);
   const [requireStreaming, setRequireStreaming] = useState<boolean>(false);
 
-  // Derived state & pricing feedback
+  // Derived state & pricing
   const [sessionsCount, setSessionsCount] = useState<number>(0);
   const [availabilityMessage, setAvailabilityMessage] = useState<string>('');
   const [proceedEnabled, setProceedEnabled] = useState<boolean>(false);
@@ -136,13 +140,13 @@ const NewBookingPage: React.FC = () => {
   const STREAMING_FEE = 150000;
   const VAT_RATE = 0.075;
 
-  // Update sessions count whenever startDate or endDate changes.
+  // Whenever startDate or endDate changes, recalc sessions count
   useEffect(() => {
     const count = computeSessionsCount(startDate, endDate);
     setSessionsCount(count);
   }, [startDate, endDate]);
 
-  // Calculate price breakdown.
+  // Calculate price breakdown
   const calculatePrice = (sessions: number) => {
     const totalHours = sessions * hoursPerSession;
     const costPerHour = totalHours > 24 ? LONG_RATE : DAY_RATE;
@@ -169,7 +173,7 @@ const NewBookingPage: React.FC = () => {
     });
   };
 
-  // Handler for Availability Check (Step 1)
+  // Step 1: Check Availability
   const handleCheckAvailability = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -178,7 +182,17 @@ const NewBookingPage: React.FC = () => {
     setAvailabilityMessage('');
     setProceedEnabled(false);
 
-    if (!customerName || !phoneNumber || !email || !startDate || !endDate || !startHour || !startMinute || !startPeriod || !hoursPerSession) {
+    if (
+      !customerName ||
+      !phoneNumber ||
+      !email ||
+      !startDate ||
+      !endDate ||
+      !startHour ||
+      !startMinute ||
+      !startPeriod ||
+      !hoursPerSession
+    ) {
       setError('Please fill in all required fields.');
       setLoading(false);
       return;
@@ -200,7 +214,9 @@ const NewBookingPage: React.FC = () => {
     try {
       const count = computeSessionsCount(startDate, endDate);
       setSessionsCount(count);
+
       const unavailableCount = await checkAvailability(new Date(startDate), new Date(endDate));
+
       let message = '';
       let enableProceed = true;
       if (unavailableCount === 0) {
@@ -214,6 +230,8 @@ const NewBookingPage: React.FC = () => {
       setAvailabilityMessage(message);
       setProceedEnabled(enableProceed);
       setOrderConfirmed(false);
+
+      // Reset price breakdown
       setPriceBreakdown({
         baseCost: 0,
         mediaCost: 0,
@@ -225,7 +243,7 @@ const NewBookingPage: React.FC = () => {
         vat: 0,
         total: 0,
       });
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error checking availability:', err);
       setError('Failed to check availability.');
     } finally {
@@ -233,23 +251,27 @@ const NewBookingPage: React.FC = () => {
     }
   };
 
-  // Handler for Confirm Order button in Step 2.
+  // Step 2: Confirm order (compute price)
   const handleConfirmOrder = () => {
     calculatePrice(sessionsCount);
     setOrderConfirmed(true);
   };
 
-  // Handler for Confirm Booking (Proceed to Payment)
+  // Step 2: Proceed to Payment
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setSuccess(null);
     setError(null);
 
+    // Combine start date & time
     const combinedStartTime = convertTo24HourTime(startHour, startMinute, startPeriod);
     const startDateTime = new Date(`${startDate}T${combinedStartTime}:00`);
 
     try {
+      // You might store the booking as "unpaid" or "pending" in your DB here.
+      // Then the final invoice & reference code happen after payment success.
+
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       console.log('Posting booking data to:', `${API_URL}/api/bookings`);
       const bookingData = {
@@ -266,14 +288,20 @@ const NewBookingPage: React.FC = () => {
         ownDrinks,
         requireStreaming,
         priceBreakdown,
+        // status: 'pending' or something, if your backend expects a booking status
       };
 
+      // Create booking in the backend
       await axios.post(`${API_URL}/api/bookings`, bookingData);
+
       setSuccess('Booking created successfully!');
+      // Now navigate to Payment page, pass the total in the query
       router.push(
-        `/payment?amount=${priceBreakdown.total}&customerName=${encodeURIComponent(customerName)}`
+        `/payment?amount=${priceBreakdown.total}&customerName=${encodeURIComponent(
+          customerName
+        )}`
       );
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error creating booking:', err);
       setError('Failed to create booking. Please try again.');
     } finally {
@@ -320,6 +348,7 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
+
             <Form.Group controlId="startDate" className="mb-3">
               <Form.Label>Start Date</Form.Label>
               <Form.Control
@@ -335,6 +364,7 @@ const NewBookingPage: React.FC = () => {
                 </Form.Text>
               )}
             </Form.Group>
+
             <Form.Group controlId="endDate" className="mb-3">
               <Form.Label>End Date</Form.Label>
               <Form.Control
@@ -350,6 +380,7 @@ const NewBookingPage: React.FC = () => {
                 </Form.Text>
               )}
             </Form.Group>
+
             <Row className="mb-3">
               <Form.Group as={Col} controlId="startHour">
                 <Form.Label>Start Hour</Form.Label>
@@ -368,6 +399,7 @@ const NewBookingPage: React.FC = () => {
                   })}
                 </Form.Select>
               </Form.Group>
+
               <Form.Group as={Col} controlId="startMinute">
                 <Form.Label>Start Minute</Form.Label>
                 <Form.Select
@@ -379,6 +411,7 @@ const NewBookingPage: React.FC = () => {
                   <option value="30">30</option>
                 </Form.Select>
               </Form.Group>
+
               <Form.Group as={Col} controlId="startPeriod">
                 <Form.Label>AM/PM</Form.Label>
                 <Form.Select
@@ -391,6 +424,7 @@ const NewBookingPage: React.FC = () => {
                 </Form.Select>
               </Form.Group>
             </Row>
+
             <Form.Group controlId="hoursPerSession" className="mb-3">
               <Form.Label>Number of Hours per Session</Form.Label>
               <Form.Control
@@ -401,15 +435,18 @@ const NewBookingPage: React.FC = () => {
                 required
               />
             </Form.Group>
+
             <Button variant="primary" type="submit" disabled={loading} className="w-100">
               {loading ? 'Checking Availability...' : 'Check Availability'}
             </Button>
           </Form>
+
           {availabilityMessage && (
             <Alert variant="info" className="mt-3">
               {availabilityMessage}
             </Alert>
           )}
+
           {proceedEnabled && (
             <div className="mt-3">
               <Button variant="success" onClick={() => setStep(2)} className="w-100">
@@ -417,6 +454,7 @@ const NewBookingPage: React.FC = () => {
               </Button>
             </div>
           )}
+
           {!proceedEnabled && availabilityMessage && availabilityMessage.includes('None') && (
             <Alert variant="danger" className="mt-3">
               The selected dates are not available.
@@ -439,6 +477,7 @@ const NewBookingPage: React.FC = () => {
               {loading ? 'Confirming Order...' : 'Confirm Order'}
             </Button>
           )}
+
           <Table striped bordered hover>
             <thead>
               <tr>
@@ -457,18 +496,24 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">
-                  {(hoursPerSession * (sessionsCount * hoursPerSession > 24 ? LONG_RATE : DAY_RATE)).toLocaleString()}
+                  {(hoursPerSession *
+                    (sessionsCount * hoursPerSession > 24 ? LONG_RATE : DAY_RATE)
+                  ).toLocaleString()}
                 </td>
                 <td className="text-end">
-                  {(hoursPerSession * (sessionsCount * hoursPerSession > 24 ? LONG_RATE : DAY_RATE) * sessionsCount).toLocaleString()}
+                  {(
+                    hoursPerSession *
+                    (sessionsCount * hoursPerSession > 24 ? LONG_RATE : DAY_RATE) *
+                    sessionsCount
+                  ).toLocaleString()}
                 </td>
                 <td>—</td>
               </tr>
-              {/* Separator Row for Additional Services */}
+
+              {/* Additional Services */}
               <tr>
                 <td colSpan={5}><strong>Additional Services</strong></td>
               </tr>
-              {/* Media Services row */}
               <tr>
                 <td>
                   <Form.Check
@@ -484,10 +529,11 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">{MEDIA_FEE.toLocaleString()}</td>
-                <td className="text-end">{wantMediaServices ? (sessionsCount * MEDIA_FEE).toLocaleString() : '0'}</td>
+                <td className="text-end">
+                  {wantMediaServices ? (sessionsCount * MEDIA_FEE).toLocaleString() : '0'}
+                </td>
                 <td>{wantMediaServices ? 'Yes' : 'No'}</td>
               </tr>
-              {/* LED Screen row */}
               <tr>
                 <td>
                   <Form.Check
@@ -503,10 +549,11 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">{LED_FEE.toLocaleString()}</td>
-                <td className="text-end">{needLEDScreen ? (sessionsCount * LED_FEE).toLocaleString() : '0'}</td>
+                <td className="text-end">
+                  {needLEDScreen ? (sessionsCount * LED_FEE).toLocaleString() : '0'}
+                </td>
                 <td>{needLEDScreen ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Sound Equipment row */}
               <tr>
                 <td>
                   <Form.Check
@@ -522,10 +569,11 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">{SOUND_FEE.toLocaleString()}</td>
-                <td className="text-end">{needSoundEquipment ? (sessionsCount * SOUND_FEE).toLocaleString() : '0'}</td>
+                <td className="text-end">
+                  {needSoundEquipment ? (sessionsCount * SOUND_FEE).toLocaleString() : '0'}
+                </td>
                 <td>{needSoundEquipment ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Drinks Corkage row */}
               <tr>
                 <td>
                   <Form.Check
@@ -541,10 +589,11 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">{DRINK_FEE.toLocaleString()}</td>
-                <td className="text-end">{ownDrinks ? (sessionsCount * DRINK_FEE).toLocaleString() : '0'}</td>
+                <td className="text-end">
+                  {ownDrinks ? (sessionsCount * DRINK_FEE).toLocaleString() : '0'}
+                </td>
                 <td>{ownDrinks ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Streaming Services row */}
               <tr>
                 <td>
                   <Form.Check
@@ -560,10 +609,12 @@ const NewBookingPage: React.FC = () => {
                 </td>
                 <td className="text-end">{sessionsCount}</td>
                 <td className="text-end">{STREAMING_FEE.toLocaleString()}</td>
-                <td className="text-end">{requireStreaming ? (sessionsCount * STREAMING_FEE).toLocaleString() : '0'}</td>
+                <td className="text-end">
+                  {requireStreaming ? (sessionsCount * STREAMING_FEE).toLocaleString() : '0'}
+                </td>
                 <td>{requireStreaming ? 'Yes' : 'No'}</td>
               </tr>
-              {/* Subtotal, VAT, and Total rows (shown after order is confirmed) */}
+
               {orderConfirmed && (
                 <>
                   <tr>
@@ -591,6 +642,7 @@ const NewBookingPage: React.FC = () => {
               )}
             </tbody>
           </Table>
+
           {!orderConfirmed && (
             <Button
               variant="warning"
@@ -602,6 +654,7 @@ const NewBookingPage: React.FC = () => {
               {loading ? 'Confirming Order...' : 'Confirm Order'}
             </Button>
           )}
+
           {orderConfirmed && (
             <Button
               variant="success"
@@ -613,6 +666,7 @@ const NewBookingPage: React.FC = () => {
               {loading ? 'Confirming Booking...' : 'Proceed to Payment'}
             </Button>
           )}
+
           <Button
             variant="secondary"
             type="button"
@@ -628,3 +682,12 @@ const NewBookingPage: React.FC = () => {
 };
 
 export default NewBookingPage;
+
+/*
+  Note:
+  - The reference code is NOT generated here. The final invoice & reference code
+    is only issued after payment is successful (on the Payment success callback or final invoice page).
+  - If desired, your final page can generate a 10-digit alpha-numeric code,
+    store it in the DB for that booking, email the user (with the code + invoice),
+    and display it on-screen.
+*/

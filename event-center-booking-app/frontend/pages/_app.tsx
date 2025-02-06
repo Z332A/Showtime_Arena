@@ -8,10 +8,19 @@ import Script from 'next/script';
 function MyApp({ Component, pageProps }: AppProps) {
   return (
     <>
-      {/* Use next/script to load Paystack inline script */}
-      <Script src="https://js.paystack.co/v1/inline.js" strategy="beforeInteractive" />
+      {/* Load the Paystack inline script after the page has hydrated */}
+      <Script 
+        src="https://js.paystack.co/v1/inline.js" 
+        strategy="afterInteractive"
+      />
+
+      {/* Global Navbar */}
       <AppNavbar />
+
+      {/* Main page content */}
       <Component {...pageProps} />
+
+      {/* Global Footer */}
       <Footer />
     </>
   );
