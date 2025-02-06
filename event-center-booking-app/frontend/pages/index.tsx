@@ -15,6 +15,7 @@ const HomePage: React.FC = () => {
     '/images/pitch3.jpg',
     '/images/pitch4.jpg',
     '/images/pitch5.jpg',
+    '/images/pitch6.jpg',
   ];
 
   return (
